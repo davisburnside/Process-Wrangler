@@ -60,16 +60,16 @@ def script_selected_from_dropdown(scene, context):
     
     pass
 
-def warning_dialog_with_doc_link(self, context):
+# def warning_dialog_with_doc_link(self, context):
     
-    layout = self.layout
+#     layout = self.layout
     
-    msg = context.scene.processwrangler_cached_msg
-    row = layout.row()
+#     msg = context.scene.processwrangler_cached_msg
+#     row = layout.row()
     
-    layout.alert = True
-    row.label(text=msg)
-    row.alert = True
+#     layout.alert = True
+#     row.label(text=msg)
+#     row.alert = True
 
 #=========================================================
 # Logging 
@@ -229,8 +229,8 @@ def generate_step_id():
     step_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(PW_len_stepid))
     return step_id
 
-def generate_execution_context(existing_exec_ctx = None):
-    # print("previous_exec_ctx", existing_exec_ctx)
+def generate_execution_context():
+
     # These arrays will always have the same length:
     # (step_script_names, step_collection_names, step_ids, step_did_execute)
 
@@ -240,7 +240,8 @@ def generate_execution_context(existing_exec_ctx = None):
     # Int data, like timestamps, must be stored as a String. This because they are converted toC-types
     # upon saving to the Scene & the timestamps are too big of an Integer
 
-    get_logger().info("generating new execution context")
+    logger = get_logger()
+    logger.info("generating new execution context")
     exec_cxt = {
         "current_execution_data" : {
             "current_step": "-1",
@@ -259,14 +260,6 @@ def generate_execution_context(existing_exec_ctx = None):
             "error_message" : ""
         }
     }
-
-    # copy data from previous execution
-    # if existing_exec_ctx:
-        # print("Has previous exec_ctx")
-        # for field_name in existing_exec_ctx["previous_execution_data"].keys():
-        #     previous_value = existing_exec_ctx["current_execution_data"][field_name]
-        #     print("Copying ", field_name)
-        #     exec_cxt["current_execution_data"][field_name] = previous_value
 
     return exec_cxt
 
@@ -321,24 +314,6 @@ def force_redraw_UI(context):
 
 #==========================================================
 # Getters
-
-# def get_all_col_names_in_scene(scene):
-
-
-# def get_execution_context(create_if_missing = True, scene = None):
-
-#     # This method will generate a new ctx and attach to active scene if it doesn't exist
-#     # Execution Context is retrieved as a IDPropertyGroup object. It must be cast to a dict to be usable
-
-#     previous_exec_ctx = scene.get(scene_ctx_name)
-#     if not previous_exec_ctx:
-#         if not create_if_missing:
-#             return None
-#         else:
-#             new_exec_ctx = generate_execution_context(previous_exec_ctx.to_dict())
-#             save_exec_cxt(new_exec_ctx)
-#     exec_ctx = scene.get(scene_ctx_name).to_dict()
-#     return exec_ctx
 
 def get_prev_exec_steps(exec_ctx):
     return exec_ctx["previous_execution_data"]["step_script_names"], exec_ctx["previous_execution_data"]["step_collection_names"]
@@ -397,6 +372,8 @@ def get_names_of_PW_tagged_things(datablock_types = PW_db_types, tag_name=PW_tag
     for datablock_type in datablock_types:
         # datablock = getattr(bpy.data, datablock_type)
         tagged_member_names = [x.name for x in get_PW_tagged(datablock_type, tag_name)]
+        # print(datablock_type, "??????", tagged_member_names)
+        # traceback.print_stack()
         return_dict[datablock_type] = tagged_member_names
 
     return return_dict
@@ -418,7 +395,7 @@ def get_PW_tagged(datablock_type, tag_name=PW_tag_generated):
     # get tagged objects (python objects, not blender objects)
     target_datablocks = getattr(bpy.data, datablock_type)
     all_in_scene = [x for x in target_datablocks]
-    all_PW_tagged= [x for x in all_in_scene if has_named_tag(x, tag_name)]
+    all_PW_tagged= [x for x in all_in_scene if is_PW_tagged(x, tag_name)]
     return all_PW_tagged
 
 def get_PW_tagged_for_step(datablock_type, tag_name=PW_tag_generated, step_id = None):
@@ -446,7 +423,7 @@ def get_steps_execution_override(scene):
 # Setters
 
 def save_exec_cxt(new_exec_cxt, scene):
-
+    
     # write previous execution context data to the new one
     previous_exec_ctx = scene.get(scene_ctx_name)
     if previous_exec_ctx:
@@ -521,7 +498,7 @@ def PW_untag_all(scene):
         datablock = Helpers.get_datablock(datablock_type, scene)
         for datablock_member in Helpers.get_PW_tagged(datablock_type):
             for tag_name in all_PW_tags:
-                if has_named_tag(datablock_member, tag_name):
+                if is_PW_tagged(datablock_member, tag_name):
                     try:
                         # Maybe trigger user-customized change listeners? Not sure
                         datablock_member[tag_name] = None
@@ -613,6 +590,8 @@ def validate_script_has_required_functions(script_name):
 
 def step_col_validate_children(col_step, col_child_step_name, child_step_id, rename_if_needed=True):
     
+    # print(col_step, col_child_step_name, child_step_id, rename_if_needed)
+
     logger = get_logger()
 
     pw_tagged_children_cols = [x for x in col_step.children if is_col_procstep_owned(x)]
@@ -623,7 +602,7 @@ def step_col_validate_children(col_step, col_child_step_name, child_step_id, ren
     
     col_child = bpy.data.collections.get(col_child_step_name, None)
  
-    has_invalid_children = num_parent_children > 1 or (col_child_step_name and pw_tagged_children_cols[0].name != col_child_step_name)
+    has_invalid_children = (col_child_step_name and pw_tagged_children_cols[0].name != col_child_step_name)
     
     # if num_parent_children == 2 and (col_child_step_name and pw_tagged_children_cols[0].name != col_child_step_name):
 
@@ -664,10 +643,6 @@ def is_exec_ctx_valid(exec_ctx):
     
     return True
 
-def has_named_tag(obj, tag_name=PW_tag_generated):
-    
-    return obj.get(tag_name, False)
-
-def is_PW_tagged(obj):
+def is_PW_tagged(obj, tag_name=PW_tag_generated):
     
     return obj.get(PW_tag_generated, False)

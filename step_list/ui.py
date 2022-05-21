@@ -138,3 +138,11 @@ class PROCESSWRANGLER_PT_ProcessPanel(Panel):
             if len(error_msg) > 0:
                 error_msg_lines = error_msg.split("\n")
                 _ = [col.label(text=f"    {x}") for x in error_msg_lines]
+
+        # if no execution context, print cached message (if it exists) 
+        else:
+            cached_msg = scn.get("processwrangler_cached_msg", None)
+            if cached_msg:
+                col.alert = True
+                error_msg_lines = cached_msg.split("\n")
+                _ = [col.label(text=f"    {x}") for x in error_msg_lines]

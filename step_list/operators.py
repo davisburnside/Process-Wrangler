@@ -108,7 +108,7 @@ class PROCESSWRANGLER_OT_executeScriptList(Operator):
  
         # Execute script
         #============================
-        Step_Script_Execution.PW_execute(
+        did_execute, error_msg = Step_Script_Execution.PW_execute(
             context, 
             steps_execution_override, 
             logging_level, 
@@ -116,26 +116,32 @@ class PROCESSWRANGLER_OT_executeScriptList(Operator):
             logging_tab_len)  
         #============================
         
-        # update Collection labels in UIList
-        all_steps = scn.processwrangler_step_list
-        exec_cxt = scn.get(Helpers.scene_ctx_name)
-        for index, step in enumerate(all_steps):
-            if exec_cxt:
-                col_names = exec_cxt["current_execution_data"]["step_collection_names"]
-                steps_did_execute = exec_cxt["current_execution_data"]["step_did_execute"]
-                
-                #remove first entry- it is not part of the List
-                steps_did_execute = steps_did_execute[1:]
-                col_names = col_names[1:]
+        if error_msg:
+            print("\n\n", error_msg, "\n\n\n")
+            scn["processwrangler_cached_msg"] = error_msg
 
-                if len(col_names) > index:
+        if did_execute:
+
+            # update Collection labels in UIList
+            all_steps = scn.processwrangler_step_list
+            exec_cxt = scn.get(Helpers.scene_ctx_name)
+            for index, step in enumerate(all_steps):
+                if exec_cxt:
+                    col_names = exec_cxt["current_execution_data"]["step_collection_names"]
+                    steps_did_execute = exec_cxt["current_execution_data"]["step_did_execute"]
                     
-                    # save name of new collection
-                    step.step_col_name = col_names[index]
-                    
-                    # save the stepnum that this step was last executed at
-                    if steps_did_execute[index]:
-                        step.step_index_when_previously_executed = index
+                    #remove first entry- it is not part of the List
+                    steps_did_execute = steps_did_execute[1:]
+                    col_names = col_names[1:]
+
+                    if len(col_names) > index:
+                        
+                        # save name of new collection
+                        step.step_col_name = col_names[index]
+                        
+                        # save the stepnum that this step was last executed at
+                        if steps_did_execute[index]:
+                            step.step_index_when_previously_executed = index
                         
         return {"FINISHED"}    
 
@@ -222,7 +228,6 @@ class PROCESSWRANGLER_OT_clearAll(Operator):
         Scene_Wiping.PW_scene_clear_all(context.scene)
           
         return {"FINISHED"}    
-
 
 class PROCESSWRANGLER_OT_createPWTemplateScript(Operator):
     """Create New Script With Process Wrangler Template"""

@@ -65,12 +65,12 @@ def PW_scene_clear_all(scene):
                 # datablock.remove(db_member, do_unlink=True)
 
     # clear Execution Context data from Scene 
-    all_scene_PW_ctx_props = [Helpers.scene_ctx_name]
+    all_scene_PW_ctx_props = [Helpers.scene_ctx_name, "processwrangler_cached_msg"]
     for cust_prop in all_scene_PW_ctx_props:
         if scene.get(cust_prop, False):
             del scene[cust_prop]
 
-def delete_PW_step_collection(col_name, scene, include_children=True):
+def delete_PW_step_collection(col_name, scene, include_children=True, include_col = True):
 
     logger = Helpers.get_logger()
 
@@ -96,15 +96,17 @@ def delete_PW_step_collection(col_name, scene, include_children=True):
         for datablock_member in Helpers.get_PW_tagged(datablock_type):
             
             # remove any PW tagged objects missing a step Id (unsure when this would happen)
-            member_has_step_id = datablock_member.get(Helpers.PW_step_id_tag, False)
-
-            if not member_has_step_id and Helpers.is_PW_tagged(datablock_member):
-                logger.debug(f"'{datablock_member.name}' has no step ID")
-                remove_thing(datablock_member, datablock_type, scene)
-                continue
+            # member_has_step_id = datablock_member.get(Helpers.PW_step_id_tag, False)
+            # if not member_has_step_id and Helpers.is_PW_tagged(datablock_member):
+            #     logger.debug(f"'{datablock_member.name}' has no step ID")
+            #     remove_thing(datablock_member, datablock_type, scene)
+            #     continue
 
             # remove any PW tagged objects holding a step id of a step flagged for execution
             member_step_id = datablock_member[Helpers.PW_step_id_tag]
             if step_id_to_delete == member_step_id and Helpers.is_PW_tagged(datablock_member):
-                remove_thing(datablock_member, datablock_type, scene)
                 
+                if datablock_member != col_step:
+                    remove_thing(datablock_member, datablock_type, scene)
+                elif include_col:
+                    remove_thing(datablock_member, datablock_type, scene)

@@ -51,16 +51,20 @@ def restore_screen_image_contents(step_id, space_imageeditors):
 
 def PW_execute(
     context, 
-    execution_override = None, 
+    execution_override_steps = None, 
     log_level=logging.DEBUG, 
     log_style="COLORFUL", 
     tab_length = 2):
+
+    if not execution_override_steps:
+        execution_override_steps = []
 
     space_imageeditors = []
     scene = context.scene
     prev_exec_ctx = scene.get(Helpers.scene_ctx_name)
     prev_exec_ctx = prev_exec_ctx.to_dict() if prev_exec_ctx else None
     exec_ctx = None
+    should_save_exec_ctx_to_scene = True
     try:
 
         # configure logging
@@ -115,9 +119,10 @@ def PW_execute(
         prev_step_data = {
             "col_name": Helpers.pw_master_collection_name, 
             "script_name": __name__}
-        print("4")
-        # Validate Scripts and Collections for all process steps
+
+        # Validate Scripts and Collections for all steps
         # Also compile final step data array
+        block_process_execution = False
         complete_step_data_array = []
         for step_data in scripts_list_indexed:
             stepnum = step_data["stepnum"]
@@ -126,7 +131,7 @@ def PW_execute(
             step_id = step_data["step_id"]
 
             # allow steps to be executed even if not selected in the UI
-            if execution_override and stepnum in execution_override:
+            if stepnum in execution_override_steps:
                 should_execute = True
 
             # Ensure that Text datablocks are valid scripts
@@ -135,18 +140,24 @@ def PW_execute(
             text_datablock= bpy.data.texts.get(script_name)
             if not text_datablock:
                 raise Exception(f"Text Datablock named {script_name} does not exist")
-            
-            # Determine the names of each step outputs in process
-            # If any naming conflicts exists, prompt the user to rename collections
+
+            # Validate script contents
             script_module = None
             module_error = None
             try:
                 script_module = text_datablock.as_module() 
-            except Exception as e:
+                if Helpers.processWrangler_execute_func_name not in list(dir(script_module)):
+                    function_signature = f"{Helpers.processWrangler_execute_func_name}(exec_ctx)"
+                    module_error = f"Script '{text_datablock.name}' is missing a required function '{function_signature}'"
+                    block_process_execution = True
+            except Exception as e: 
+                
+                where_error = f"Compile error in Script '{script_name}' at Step {stepnum} "
+                module_error = f"{where_error}\n{str(e)}"
+                block_process_execution = True
 
-                # Error will be logged during step execution
-                module_error = e
-
+            # Determine the names of each step outputs in process
+            # If any naming conflicts exists, prompt the user to rename collections
             # Collection name depends on step number & user preference
             col_name = Helpers.get_col_name_of_step_script(stepnum, script_module)
             existing_col = bpy.data.collections.get(col_name, False)
@@ -164,7 +175,16 @@ def PW_execute(
                 "script_module": script_module,
                 "module_error": module_error
             })
-        print("3")
+
+        if block_process_execution:
+            should_save_exec_ctx_to_scene = False
+            errors = [x["module_error"] for x in complete_step_data_array if x["module_error"]]
+            errors = "\n\n".join(errors)
+            print(errors)
+            # traceback.print_stack()
+            
+            return False, errors
+
         # If steps have been reordered, execution must happen for all steps after the highest-changed step
         # IE: If steps 3 & 4 changed places, everything after step 2 must be reexecuted
         if exec_ctx and exec_ctx["previous_execution_data"].get("step_ids"):
@@ -195,9 +215,8 @@ def PW_execute(
         
         # Execute scripts / generate collections in sequential order
         last_stepnum = len(complete_step_data_array)
+        
         for step_data in complete_step_data_array:
-
-            # step index 0 is already defined (pw_master_collection_name), so increment all steps by 1
             stepnum = step_data["stepnum"]
             step_id = step_data["step_id"]
             should_execute = step_data["should_execute"]
@@ -206,27 +225,27 @@ def PW_execute(
             text_datablock = step_data["text_datablock"]
             script_module = step_data["script_module"]
             module_error = step_data["module_error"]
-            
+
             # Steps need to have Collections, even if a step script isn't executed
             parent_col_name = prev_step_data["col_name"]
             parent_col = bpy.data.collections[parent_col_name]
             step_col = bpy.data.collections.get(col_name, None)
             if not step_col:
-                
                 step_col = Helpers.create_PW_step_collection(step_id, col_name, Helpers.pw_master_collection_name)
 
-            if stepnum != last_stepnum:
-                child_col_name = complete_step_data_array[stepnum]["col_name"]
-                child_step_id = complete_step_data_array[stepnum]["step_id"]
-                if Helpers.step_col_validate_children(step_col, child_col_name, child_step_id):
+            # Validate children
+            # if stepnum != last_stepnum:
+            #     child_col_name = complete_step_data_array[stepnum]["col_name"]
+            #     child_step_id = complete_step_data_array[stepnum]["step_id"]
+            #     if Helpers.step_col_validate_children(step_col, child_col_name, child_step_id):
 
-                    # set execution flag for first step
-                    should_execute = True
+            #         # set execution flag for first step
+            #         should_execute = True
                     
-                    # #delete Collection & Collection members of first-level children
-                    _ = [Scene_Wiping.delete_PW_step_collection(x.name, scene, False) for x in step_col.children]
+            #         # #delete Collection & Collection members of first-level children
+            #         _ = [Scene_Wiping.delete_PW_step_collection(x.name, scene, False) for x in step_col.children]
 
-            # save step data to execution context
+            # append step data to execution context (Not saved to Scene until process completes)
             exec_ctx["current_execution_data"]["step_script_names"].append(script_name)
             exec_ctx["current_execution_data"]["step_collection_names"].append(col_name)
             exec_ctx["current_execution_data"]["step_ids"].append(step_id)
@@ -242,16 +261,16 @@ def PW_execute(
                     logger.info(f"executing step {stepnum}")
 
                     # clear old stuff, make new stuff
-                    original_col_children_names = [x.name for x in step_col.children]
-                    _ = [Scene_Wiping.delete_PW_step_collection(x.name, scene, False) for x in parent_col.children]
-                    step_col = Helpers.create_PW_step_collection(step_id, col_name, parent_col_name, exec_ctx)
+                    Scene_Wiping.delete_PW_step_collection(col_name, scene, include_children = True, include_col=False)
+                    # original_col_children_names = [x.name for x in step_col.children]
+                    # _ = [Scene_Wiping.delete_PW_step_collection(x.name, scene, False) for x in parent_col.children]
 
                     # new Collections takes over parentage of children from previous executions
                     # If the child steps are flagged for execution though, the children will be replaced in later steps
-                    for child_col_name in original_col_children_names:
-                        child_col = bpy.data.collections.get(child_col_name)
-                        if child_col and child_col_name not in [x.name for x in step_col.children]:
-                            step_col.children.link(child_col)
+                    # for child_col_name in original_col_children_names:
+                    #     child_col = bpy.data.collections.get(child_col_name)
+                    #     if child_col and child_col_name not in [x.name for x in step_col.children]:
+                    #         step_col.children.link(child_col)
 
                     # get 'before' snapshot for tagging new objects 
                     scene_snapshot_before_step = Helpers.snapshot_scene_objects(scene)
@@ -325,13 +344,14 @@ def PW_execute(
 
                 # Script is flagged as belonging to a Process Step, but missing the required execution function         
                 else:
-                    function_signature = f"{Helpers.processWrangler_execute_func_name}(exec_ctx)"
-                    error_str = f"Script '{text_datablock.name}' is missing a required function '{function_signature}'"
+                    # function_signature = f"{Helpers.processWrangler_execute_func_name}(exec_ctx)"
+                    # error_str = f"Script '{text_datablock.name}' is missing a required function '{function_signature}'"
 
-                    # Exit execution loop if python error occurs
-                    exec_ctx["execution_summary"]["error_message"] = error_str
-                    exec_ctx["current_execution_data"]["execution_result"] = "EXECUTION FAILED" 
-                    logger.error(error_str)
+                    # # Exit execution loop if python error occurs
+                    # exec_ctx["execution_summary"]["error_message"] = error_str
+                    # exec_ctx["current_execution_data"]["execution_result"] = "EXECUTION FAILED" 
+                    # logger.error(error_str)
+                    print("THIS SHOULDN'T BE HERE 1")
                     break
 
             else:
@@ -367,5 +387,6 @@ def PW_execute(
         exec_ctx["current_execution_data"]["execution_result"] = "EXECUTION FAILED" 
         logger.error(e)
     finally:
-
-        Helpers.save_exec_cxt(exec_ctx, scene)
+        if should_save_exec_ctx_to_scene:
+            Helpers.save_exec_cxt(exec_ctx, scene)
+            return True, None
