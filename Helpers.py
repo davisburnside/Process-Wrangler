@@ -374,11 +374,11 @@ def get_data_for_stepnum(stepnum, exec_ctx, use_previous=False):
 
 def get_col_name_of_step_script(stepnum, script_module):
 
-    return str(f"Step {stepnum}")
     # if not script_module or "step_description" not in list(dir(script_module)):
     #     return str(f"Step {stepnum}")
     # else:
     #     return str(f"Step {stepnum}: {script_module.step_description}")
+    return str(f"Step {stepnum}")
 
 def get_col_parent(col):
     parent_lookup = {}

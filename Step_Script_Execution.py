@@ -115,7 +115,7 @@ def PW_execute(
         prev_step_data = {
             "col_name": Helpers.pw_master_collection_name, 
             "script_name": __name__}
-
+        print("4")
         # Validate Scripts and Collections for all process steps
         # Also compile final step data array
         complete_step_data_array = []
@@ -164,7 +164,7 @@ def PW_execute(
                 "script_module": script_module,
                 "module_error": module_error
             })
-
+        print("3")
         # If steps have been reordered, execution must happen for all steps after the highest-changed step
         # IE: If steps 3 & 4 changed places, everything after step 2 must be reexecuted
         if exec_ctx and exec_ctx["previous_execution_data"].get("step_ids"):
@@ -212,7 +212,8 @@ def PW_execute(
             parent_col = bpy.data.collections[parent_col_name]
             step_col = bpy.data.collections.get(col_name, None)
             if not step_col:
-                step_col = Helpers.create_PW_step_collection(step_id, col_name, parent_col_name)
+                
+                step_col = Helpers.create_PW_step_collection(step_id, col_name, Helpers.pw_master_collection_name)
 
             if stepnum != last_stepnum:
                 child_col_name = complete_step_data_array[stepnum]["col_name"]
@@ -337,7 +338,7 @@ def PW_execute(
                 logger.info(f"skipping execution for step {stepnum}")
 
                 # copy attached data from previous run
-                all_prev_step_attachment_arrays = prev_exec_ctx["previous_execution_data"].get("step_attached_data")
+                # all_prev_step_attachment_arrays = prev_exec_ctx["previous_execution_data"].get("step_attached_data")
                 # print(all_prev_step_attachment_arrays)
                 # print(Helpers.pretty_json(exec_ctx["previous_execution_data"]))
                 # if all_prev_step_attachment_arrays and len(all_prev_step_attachment_arrays) >= stepnum:
