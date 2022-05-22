@@ -23,15 +23,15 @@ from bpy.types import (Operator,
 from .. import Helpers 
 from .. import Scene_Wiping 
 
-def exec_ctx_to_str(exec_ctx, scene):
+def exec_ctx_to_str(exec_ctx, process):
 
     if not exec_ctx:
         return None
-
+    
     # configured in debug panel
-    tab_size = scene.processwrangler_console_log_tab
-    include_step_attached_data = scene.processwrangler_console_include_step_attachments
-    include_prev_step = scene.processwrangler_console_include_prev_step
+    tab_size = process.console_log_tab
+    include_step_attached_data = process.console_include_step_attachments
+    include_prev_step = process.console_include_prev_step
     
     # remove unwanted parts
     exec_ctx_dict = exec_ctx.to_dict()
@@ -63,12 +63,12 @@ class PROCESSWRANGLER_OT_printExecutionContext(Operator):
     def execute(self, context):
         
         scn = context.scene
-        any_scripts_unenabled = False in [x.step_enabled for x in list(scn.processwrangler_step_list)]
+        process = scn.processwrangler_data.scene_processes[0]
         exec_ctx = scn.get(Helpers.scene_ctx_name, None)
         
         #bypass logging, use print instead
         if exec_ctx:      
-            print(f"\n{exec_ctx_to_str(exec_ctx, scn)}\n")
+            print(f"\n{exec_ctx_to_str(exec_ctx, process)}\n")
         else:
             print(f"No Execution Context found in scene '{scn.name}'. You must execute a process first.")
           
@@ -103,8 +103,9 @@ class PROCESSWRANGLER_OT_copyExecutionContextToClipboard(Operator):
     def execute(self, context):
         
         scn = context.scene
+        process = scn.processwrangler_data.scene_processes[0]
         exec_ctx = scn.get(Helpers.scene_ctx_name, None)
-        exec_ctx_str = exec_ctx_to_str(exec_ctx, scn)
+        exec_ctx_str = exec_ctx_to_str(exec_ctx, process)
         bytes = exec_ctx_str.encode('utf-8')
         if sys.platform == 'win32' or sys.platform == 'cygwin':
             subprocess.Popen(['clip'], stdin=subprocess.PIPE).communicate(bytes)

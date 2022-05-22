@@ -68,6 +68,7 @@ class PROCESSWRANGLER_PT_ProcessPanel(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = 'Process Wrangler'
+    # bl_parent_id = "PROCESSWRANGLER_PT_AllSceneProcesses"
     bl_ui_units_x = 10
 
     execution_result_string: bpy.props.StringProperty() 
@@ -76,6 +77,7 @@ class PROCESSWRANGLER_PT_ProcessPanel(Panel):
         
         layout = self.layout
         scn = bpy.context.scene
+        process = scn.processwrangler_data.scene_processes[0]
         exec_ctx = scn.get(Helpers.scene_ctx_name, None)
         
         row = layout.row()
@@ -92,10 +94,10 @@ class PROCESSWRANGLER_PT_ProcessPanel(Panel):
         col.template_list(
             "PROCESSWRANGLER_UL_items", 
             "", 
-            scn, 
-            "processwrangler_step_list",
-            scn,
-            "processwrangler_step_list_selectedindex", 
+            process,
+            "steps_list",
+            process,
+            "steps_list_selected_index", 
             rows=2)
         
         # Up/Down and Add/Remove Button Column
@@ -124,8 +126,15 @@ class PROCESSWRANGLER_PT_ProcessPanel(Panel):
         # output execution summary / error msg
         row = layout.row()
         col = row.column()
-        run_summary_string = ""
-        if exec_ctx:
+        run_summary_sting = ""
+
+        cached_msg = scn.processwrangler_data.scene_processes[0].get("processwrangler_cached_msg", None)
+        if cached_msg:
+                col.alert = True
+                error_msg_lines = cached_msg.split("\n")
+                _ = [col.label(text=f"    {x}") for x in error_msg_lines]
+
+        elif exec_ctx:
             error_msg = exec_ctx["execution_summary"]["error_message"]
             did_fail = len(error_msg) > 0
             run_summary = exec_ctx["execution_summary"]["run_summary"]
@@ -134,15 +143,40 @@ class PROCESSWRANGLER_PT_ProcessPanel(Panel):
             col.label(text=run_summary)
             
             # change text color if error occured
-            col.alert = False
+            # col.alert = False
             if len(error_msg) > 0:
                 error_msg_lines = error_msg.split("\n")
                 _ = [col.label(text=f"    {x}") for x in error_msg_lines]
 
-        # if no execution context, print cached message (if it exists) 
-        else:
-            cached_msg = scn.get("processwrangler_cached_msg", None)
-            if cached_msg:
-                col.alert = True
-                error_msg_lines = cached_msg.split("\n")
-                _ = [col.label(text=f"    {x}") for x in error_msg_lines]
+# class PROCESSWRANGLER_PT_AllSceneProcesses(Panel):
+    
+#     """Debug Panel"""
+#     bl_idname = "PROCESSWRANGLER_PT_AllSceneProcesses"
+#     bl_label = "Scene Processes"
+#     bl_space_type = "VIEW_3D"
+#     bl_region_type = "UI"
+#     bl_category = 'Process Wrangler'
+    
+
+#     def draw(self, context):
+        
+#         layout = self.layout
+#         scn = bpy.context.scene
+#         exec_ctx = scn.get(Helpers.scene_ctx_name, None)
+        
+#         # clear console
+#         layout.separator()
+#         row = layout.row()
+#         row.operator("processwrangler.add_scene_process")   
+
+#         # Print Execution Context
+        
+
+#         for process in scn.processwrangler_processes:
+
+#             box = layout.box()
+#             row = box.row()
+
+#             print(process)
+
+#             row.menu("PROCESSWRANGLER_PT_ProcessPanel", icon="COLLAPSEMENU")

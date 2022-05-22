@@ -51,6 +51,7 @@ def restore_screen_image_contents(step_id, space_imageeditors):
 
 def PW_execute(
     context, 
+    process,
     execution_override_steps = None, 
     log_level=logging.DEBUG, 
     log_style="COLORFUL", 
@@ -82,7 +83,7 @@ def PW_execute(
             "step_id": x.step_id,
             "is_enabled": x.step_enabled
             }
-            for x in context.scene.processwrangler_step_list]
+            for x in process.steps_list]
         scripts_list_indexed = [
             {
             "stepnum": x[0] + 1, # top-level step is already defined
@@ -180,9 +181,7 @@ def PW_execute(
             should_save_exec_ctx_to_scene = False
             errors = [x["module_error"] for x in complete_step_data_array if x["module_error"]]
             errors = "\n\n".join(errors)
-            print(errors)
             # traceback.print_stack()
-            
             return False, errors
 
         # If steps have been reordered, execution must happen for all steps after the highest-changed step

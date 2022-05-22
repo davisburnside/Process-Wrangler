@@ -49,6 +49,11 @@ def get_text_name_tuples(self, context):
     text_name_tuples = [(x.name, x.name, "") for x in list(bpy.data.texts)]
     return text_name_tuples
 
+def script_selected_from_dropdown(scene, context):
+    
+    bpy.ops.processwrangler.list_action("EXEC_DEFAULT", action="ADD")
+    
+
 class PROCESSWRANGLER_step(bpy.types.PropertyGroup):
 
     step_enabled: BoolProperty(default=True, description="Will this step script be excuted? \nStep Collections will be generated regardless")
@@ -65,6 +70,60 @@ class PROCESSWRANGLER_step(bpy.types.PropertyGroup):
     # list index, not PW index (offset by the top-level Pw component)
     # this is not changed unless a step is executed
     step_index_when_previously_executed: IntProperty(default = -1)
+
+class PROCESSWRANGLER_process_parameters(bpy.types.PropertyGroup):
+
+    steps_list: CollectionProperty(
+        type=PROCESSWRANGLER_step
+    )
+    steps_list_selected_index: IntProperty()
+    cached_msg: StringProperty()
+    console_log_level: bpy.props.EnumProperty(
+        items=(
+            ('DEBUG', "Debug", ""),
+            ("INFO", "Info", ""),
+            ('WARNING', "Warning", ""),
+            ('ERROR', "Error", "")
+        ),
+        default="DEBUG",
+        update=Helpers.update_logger
+    )
+    console_log_style: bpy.props.EnumProperty(
+        items=(
+            ("COLORFUL", "Colorful", ""),
+            ('MONOCHROME', "Monochrome", "")
+        ),
+        default="COLORFUL",
+        update=Helpers.update_logger
+    )
+    console_log_tab: bpy.props.IntProperty(
+        default=2,
+        max = 8,
+        min = 0,
+        update=Helpers.update_logger
+    )
+    console_include_step_attachments: bpy.props.BoolProperty(
+        default=True,
+        update=Helpers.update_logger
+    )
+    console_include_prev_step: bpy.props.BoolProperty(
+        default=True,
+        update=Helpers.update_logger,
+        description="Include data from previous run?"
+    )
+
+class PROCESSWRANGLER_process_data(bpy.types.PropertyGroup):
+
+    active_scene_process_index: bpy.props.IntProperty(default=0)
+    scene_processes: CollectionProperty(type=PROCESSWRANGLER_process_parameters)
+
+    # used in "Add Script" popup Panel
+    #==============================
+    scripts_in_blend_file: bpy.props.EnumProperty(
+        description="",
+        items=get_text_name_tuples,
+        update=script_selected_from_dropdown,
+        default=None)
 
 def register():
     
@@ -96,65 +155,70 @@ def register():
     auto_load.register()
     
     bpy.utils.register_class(PROCESSWRANGLER_step)
-    bpy.types.Scene.processwrangler_step_list = CollectionProperty(type=PROCESSWRANGLER_step)
-    bpy.types.Scene.processwrangler_step_list_selectedindex = IntProperty()
-    bpy.types.Scene.processwrangler_cached_msg = StringProperty()
+    bpy.utils.register_class(PROCESSWRANGLER_process_parameters)
+    bpy.utils.register_class(PROCESSWRANGLER_process_data)
+
+    bpy.types.Scene.processwrangler_data = bpy.props.PointerProperty(
+        type=PROCESSWRANGLER_process_data,
+        # name = "PW Data"
+        )
+
+    # bpy.types.Scene.processwrangler_active_process_index = bpy.props.IntProperty(default=0)
+    # bpy.types.Scen = CollectionProperty(type=PROCESSWRANGLER_process_parameters)
+
+    # bpy.types.Scene.processwrangler_step_list = CollectionProperty(type=PROCESSWRANGLER_step)
+    # bpy.types.Scene.processwrangler_step_list_selectedindex = IntProperty()
+    # bpy.types.Scene.processwrangler_cached_msg = StringProperty()
 
     # used in "Execution Variables" popup Panel
     #==============================
-    bpy.types.Scene.processwrangler_execution_variables = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+    # bpy.types.Scene.processwrangler_execution_variables = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
     
+
     # configured in Debugging Panel
     #==============================
-    bpy.types.Scene.processwrangler_console_log_level = bpy.props.EnumProperty(
-        items=(
-            ('DEBUG', "Debug", ""),
-            ("INFO", "Info", ""),
-            ('WARNING', "Warning", ""),
-            ('ERROR', "Error", "")
-        ),
-        default="DEBUG",
-        update=Helpers.update_logger
-    )
-    bpy.types.Scene.processwrangler_console_log_style = bpy.props.EnumProperty(
-        items=(
-            ("COLORFUL", "Colorful", ""),
-            ('MONOCHROME', "Monochrome", "")
-        ),
-        default="COLORFUL",
-        update=Helpers.update_logger
-    )
-    bpy.types.Scene.processwrangler_console_log_tab = bpy.props.IntProperty(
-        default=2,
-        max = 8,
-        min = 0,
-        update=Helpers.update_logger
-    )
-    bpy.types.Scene.processwrangler_console_include_step_attachments = bpy.props.BoolProperty(
-        default=True,
-        update=Helpers.update_logger
-    )
-    bpy.types.Scene.processwrangler_console_include_prev_step = bpy.props.BoolProperty(
-        default=True,
-        update=Helpers.update_logger,
-        description="Include data from previous run?"
-    )
+    # bpy.types.Scene.processwrangler_console_log_level = bpy.props.EnumProperty(
+    #     items=(
+    #         ('DEBUG', "Debug", ""),
+    #         ("INFO", "Info", ""),
+    #         ('WARNING', "Warning", ""),
+    #         ('ERROR', "Error", "")
+    #     ),
+    #     default="DEBUG",
+    #     update=Helpers.update_logger
+    # )
+    # bpy.types.Scene.processwrangler_console_log_style = bpy.props.EnumProperty(
+    #     items=(
+    #         ("COLORFUL", "Colorful", ""),
+    #         ('MONOCHROME', "Monochrome", "")
+    #     ),
+    #     default="COLORFUL",
+    #     update=Helpers.update_logger
+    # )
+    # bpy.types.Scene.processwrangler_console_log_tab = bpy.props.IntProperty(
+    #     default=2,
+    #     max = 8,
+    #     min = 0,
+    #     update=Helpers.update_logger
+    # )
+    # bpy.types.Scene.processwrangler_console_include_step_attachments = bpy.props.BoolProperty(
+    #     default=True,
+    #     update=Helpers.update_logger
+    # )
+    # bpy.types.Scene.processwrangler_console_include_prev_step = bpy.props.BoolProperty(
+    #     default=True,
+    #     update=Helpers.update_logger,
+    #     description="Include data from previous run?"
+    # )
     #==============================
     
-    # used in "Add Script" popup Panel
-    #==============================
-    bpy.types.Scene.processwrangler_scripts_in_blend_file = bpy.props.EnumProperty(
-        description="",
-        items=get_text_name_tuples,
-        update=Helpers.script_selected_from_dropdown,
-        default=None)
-    bpy.types.Scene.processwrangler_show_only_valid_scripts = bpy.props.BoolProperty(default=False)
 
-    # for cls in classes:
-    #     bpy.utils.register_class(cls)
-        
+
     print("Registered Process Wrangler")
-    print("V12")
+    print("V17")
+
+    if len(bpy.context.scene.processwrangler_data.scene_processes) == 0:
+        bpy.ops.processwrangler.add_scene_process()
         
 def unregister():
 
@@ -178,9 +242,15 @@ def unregister():
         del bpy.types.Scene.processwrangler_console_include_prev_step
     if hasattr(bpy.types.Scene, "processwrangler_execution_variables"):
         del bpy.types.Scene.processwrangler_execution_variables
+    if hasattr(bpy.types.Scene, "processwrangler_scene_processes"):
+        del bpy.types.Scene.processwrangler_scene_processes
+    if hasattr(bpy.types.Scene, "processwrangler_scene_processes"):
+        del bpy.types.Scene.processwrangler_active_process_index
+    
+    
         
-         
-    bpy.utils.unregister_class(PROCESSWRANGLER_execution_variable)
+    bpy.utils.unregister_class(PROCESSWRANGLER_process_data)     
+    bpy.utils.unregister_class(PROCESSWRANGLER_process_parameters)
     bpy.utils.unregister_class(PROCESSWRANGLER_step)
     
     #TODO implement

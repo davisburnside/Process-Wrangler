@@ -54,11 +54,7 @@ PW_db_types = [
 #========================================================================
 # UI Interaction 
 
-def script_selected_from_dropdown(scene, context):
-    
-    bpy.ops.processwrangler.list_action("EXEC_DEFAULT", action="ADD")
-    
-    pass
+
 
 # def warning_dialog_with_doc_link(self, context):
     
@@ -409,15 +405,6 @@ def get_PW_tagged_for_step(datablock_type, tag_name=PW_tag_generated, step_id = 
     all_PW_tagged = get_PW_tagged(datablock_type, tag_name)       
     step_PW_tagged = [x for x in all_PW_tagged if x[PW_step_id_tag] in step_id_variants]
     return step_PW_tagged
-
-def get_steps_execution_override(scene):
-    
-    step_list = scene.processwrangler_step_list
-    shuffled_steps = [(x[1].step_index_when_previously_executed != -1 and x[0] != x[1].step_index_when_previously_executed) for x in enumerate(step_list)]
-    enabled_steps = [x.step_enabled for x in step_list]
-    steps_execution_override = [shuffled_steps[idx] and not enabled_steps[idx] for idx in range(len(step_list))]
-    steps_execution_override = [x[0] + 1 for x in enumerate(steps_execution_override) if x[1]]
-    return shuffled_steps, steps_execution_override
 
 #==========================================================
 # Setters

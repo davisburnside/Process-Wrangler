@@ -6,13 +6,16 @@ def pw_text_datablock_change_handler(scene):
     
     try:
         idxs_to_delete = []
-        for index, step in enumerate(scene.processwrangler_step_list):
-            if not step.step_script:
-                idxs_to_delete.append(index)
-        for idx in idxs_to_delete:
-            scene.processwrangler_step_list.remove(idx)
+
+        for process in scene.processwrangler_data.scene_processes:
+
+            for index, step in enumerate(process.steps_list):
+                if not step.step_script:
+                    idxs_to_delete.append(index)
+            for idx in idxs_to_delete:
+                process.steps_list.remove(idx)
     except:
-        print("error in text_datablock_change_handler")
+        print("? error in text_datablock_change_handler")
     
 def register():
     

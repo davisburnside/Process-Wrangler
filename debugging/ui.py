@@ -34,6 +34,7 @@ class PROCESSWRANGLER_PT_DebugPanel(Panel):
         
         layout = self.layout
         scn = bpy.context.scene
+        process = scn.processwrangler_data.scene_processes[0]
         exec_ctx = scn.get(Helpers.scene_ctx_name, None)
         
         # clear console
@@ -51,10 +52,10 @@ class PROCESSWRANGLER_PT_DebugPanel(Panel):
         box.operator("processwrangler.print_exec_ctx")
         box.operator("processwrangler.copy_to_clipboard")
         row = box.row()
-        row.prop(scn, "processwrangler_console_include_step_attachments", text="Include Step-Attached Data?")
+        row.prop(process, "console_include_step_attachments", text="Include Step-Attached Data?")
         # row.label(text=)
         row = box.row()
-        row.prop(scn, "processwrangler_console_include_prev_step", text="Include Prev. Exec. Data?")
+        row.prop(process, "console_include_prev_step", text="Include Prev. Exec. Data?")
         # row.label(text="Include Prev. Exec. Data?")
         
         # bottom section
@@ -65,13 +66,13 @@ class PROCESSWRANGLER_PT_DebugPanel(Panel):
         col = split.column()
         row = col.row()
         col.label(text="Log Level")
-        col.prop(scn, "processwrangler_console_log_level", expand=True)
+        col.prop(process, "console_log_level", expand=True)
         # Right column
         col = split.column()
         row = col.row()
         col.label(text="Log Style")
-        col.prop(scn, "processwrangler_console_log_style", expand=True)
+        col.prop(process, "console_log_style", expand=True)
         col.separator()
         split = col.split(factor=0.4)
-        split.prop(scn, "processwrangler_console_log_tab", text="")
+        split.prop(process, "console_log_tab", text="")
         split.label(text="Tab Size")
