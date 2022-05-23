@@ -29,10 +29,11 @@ def get_text_name_tuples(self, context):
 def get_steps_execution_override(scene, process):
     
     steps_list = process.steps_list
-    shuffled_steps = [(x[1].step_index_when_previously_executed != -1 and x[0] != x[1].step_index_when_previously_executed) for x in enumerate(steps_list)]
+    shuffled_steps = [(x[1].step_index_when_previously_executed != -1 and x[0] != x[1].step_index_when_previously_executed - 1) for x in enumerate(steps_list)]
     enabled_steps = [x.step_enabled for x in steps_list]
     steps_execution_override = [shuffled_steps[idx] and not enabled_steps[idx] for idx in range(len(steps_list))]
     steps_execution_override = [x[0] + 1 for x in enumerate(steps_execution_override) if x[1]]
+    print(shuffled_steps, steps_execution_override)
     return shuffled_steps, steps_execution_override
 
 
@@ -76,7 +77,7 @@ class PROCESSWRANGLER_OT_executeScriptList(Operator):
         
         # Check if any shuffled scripts are deactivated.
         # If so, warn the user that they will need to be executed one time
-        exec_ctx_exists = scn.get(Helpers.scene_ctx_name)
+        exec_ctx_exists = process.get(Helpers.scene_ctx_name)
         _, steps_execution_override = get_steps_execution_override(scn, process)
         if exec_ctx_exists and len(steps_execution_override) > 0:
             string_beginning = f"Steps {' & '.join(map(str, steps_execution_override))} have" if len(steps_execution_override) > 1 else f"Step {steps_execution_override[0]} has"    
@@ -133,7 +134,7 @@ class PROCESSWRANGLER_OT_executeScriptList(Operator):
         logging_tab_len = process.console_log_tab
         
         # determine scripts that need to be executed anyway (both disabled & shuffled)
-        exec_stc_exists = scn.get(Helpers.scene_ctx_name)
+        exec_stc_exists = process.get(Helpers.scene_ctx_name)
         _, steps_execution_override = get_steps_execution_override(scn, process)
         if not exec_stc_exists or len(steps_execution_override) == 0:
             steps_execution_override = None
@@ -155,7 +156,7 @@ class PROCESSWRANGLER_OT_executeScriptList(Operator):
 
             # update Collection labels in UIList
             all_steps = process.steps_list
-            exec_ctx = scn.get(Helpers.scene_ctx_name)
+            exec_ctx = process.get(Helpers.scene_ctx_name)
             for index, step in enumerate(all_steps):
                 if exec_ctx:
                     col_names = exec_ctx["current_execution_data"]["step_collection_names"]
@@ -172,7 +173,7 @@ class PROCESSWRANGLER_OT_executeScriptList(Operator):
                         
                         # save the stepnum that this step was last executed at
                         if steps_did_execute[index]:
-                            step.step_index_when_previously_executed = index
+                            step.step_index_when_previously_executed = index + 1
                         
         return {"FINISHED"}    
 

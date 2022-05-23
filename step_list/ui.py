@@ -47,7 +47,7 @@ class PROCESSWRANGLER_UL_items(UIList):
         
         # Out-of-order icon
         index_of_prev_exec = item.step_index_when_previously_executed
-        if index_of_prev_exec != index and index_of_prev_exec != -1:
+        if index_of_prev_exec != index + 1 and index_of_prev_exec != -1:
             row.label(icon="FILE_REFRESH")
             
          # Execute? checkbox

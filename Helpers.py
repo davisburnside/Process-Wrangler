@@ -422,7 +422,6 @@ def save_exec_ctx(new_exec_ctx, process):
     previous_exec_ctx = process.get(scene_ctx_name)
     if previous_exec_ctx:
         for field_name in previous_exec_ctx["current_execution_data"].keys():
-            print(field_name)
             previous_value = previous_exec_ctx["current_execution_data"][field_name]
             new_exec_ctx["previous_execution_data"][field_name] = previous_value
         
@@ -549,17 +548,15 @@ def create_PW_step_collection(step_id, col_name, parent_col_name=None, exec_ctx=
     return new_procstep_col
 
 def flag_step_as_reordered(stepnum, exec_ctx, scene):
-
-    print("FLAG ========================== flag_step_as_reordered")
-
-    _, _, step_id = get_data_for_stepnum(stepnum, exec_ctx)
-    all_step_members = get_names_of_PW_tagged_things()
-    for datablock_type in all_step_members:
-        datablock = get_datablock(datablock_type, scene)
-        tagged_members = [x for x in get_PW_tagged(datablock_type, PW_step_id_tag)]
-        for member in tagged_members:
-            if member[PW_step_id_tag] == step_id and step_id[1 : None] != "_":
-                member[PW_step_id_tag] = f"{member[PW_step_id_tag]}_"
+    pass
+    # _, _, step_id = get_data_for_stepnum(stepnum, exec_ctx)
+    # all_step_members = get_names_of_PW_tagged_things()
+    # for datablock_type in all_step_members:
+    #     datablock = get_datablock(datablock_type, scene)
+    #     tagged_members = [x for x in get_PW_tagged(datablock_type, PW_step_id_tag)]
+    #     for member in tagged_members:
+    #         if member[PW_step_id_tag] == step_id and step_id[1 : None] != "_":
+    #             member[PW_step_id_tag] = f"{member[PW_step_id_tag]}_"
 
 #==========================================================
 # Verification
@@ -585,8 +582,6 @@ def validate_script_has_required_functions(script_name):
 
 def step_col_validate_children(col_step, col_child_step_name, child_step_id, rename_if_needed=True):
     
-    # print(col_step, col_child_step_name, child_step_id, rename_if_needed)
-
     logger = get_logger()
 
     pw_tagged_children_cols = [x for x in col_step.children if is_col_procstep_owned(x)]
