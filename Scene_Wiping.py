@@ -51,7 +51,7 @@ def eliminate_PW_orphans(scene = None, exec_ctx = None):
                 # if thing.
             # Remove datablocks with no users
 
-def PW_scene_clear_all(scene):
+def PW_scene_clear_all(scene, process):
 
     logger=Helpers.get_logger()
     logger.info("clearing all Process Wrangler results")
@@ -67,8 +67,8 @@ def PW_scene_clear_all(scene):
     # clear Execution Context data from Scene 
     all_scene_PW_ctx_props = [Helpers.scene_ctx_name, "processwrangler_cached_msg"]
     for cust_prop in all_scene_PW_ctx_props:
-        if scene.get(cust_prop, False):
-            del scene[cust_prop]
+        if process.get(cust_prop, False):
+            del process[cust_prop]
 
 def delete_PW_step_collection(col_name, scene, include_children=True, include_col = True):
 

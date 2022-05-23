@@ -53,28 +53,6 @@ def exec_ctx_to_str(exec_ctx, process):
     return exec_cxt_str
 
 #=====================================================
-
-class PROCESSWRANGLER_OT_printExecutionContext(Operator):
-    """Print Execution Context for Process"""
-    bl_idname = "processwrangler.print_exec_ctx"
-    bl_label = "Print to Console"
-    bl_description = "Print Execution Context for Process"
-    
-    def execute(self, context):
-        
-        scn = context.scene
-        process = scn.processwrangler_data.scene_processes[0]
-        exec_ctx = scn.get(Helpers.scene_ctx_name, None)
-        
-        #bypass logging, use print instead
-        if exec_ctx:      
-            print(f"\n{exec_ctx_to_str(exec_ctx, process)}\n")
-        else:
-            print(f"No Execution Context found in scene '{scn.name}'. You must execute a process first.")
-          
-        return {"FINISHED"}   
-
-#=====================================================
   
 class PROCESSWRANGLER_OT_clearConsole(Operator):
     """Clear Console"""
@@ -91,6 +69,27 @@ class PROCESSWRANGLER_OT_clearConsole(Operator):
 
         return {"FINISHED"}    
 
+#=====================================================
+
+class PROCESSWRANGLER_OT_printExecutionContext(Operator):
+    """Print Execution Context for Process"""
+    bl_idname = "processwrangler.print_exec_ctx"
+    bl_label = "Print to Console"
+    bl_description = "Print Execution Context for Process"
+    
+    def execute(self, context):
+        
+        scn = context.scene
+        process = scn.processwrangler_data.scene_processes[0]
+        exec_ctx = process.get(Helpers.scene_ctx_name, None)
+        
+        #bypass logging, use print instead
+        if exec_ctx:      
+            print(f"\n{exec_ctx_to_str(exec_ctx, process)}\n")
+        else:
+            print(f"No Execution Context found in scene '{scn.name}'. You must execute a process first.")
+          
+        return {"FINISHED"}   
 
 #=====================================================
     
@@ -104,7 +103,7 @@ class PROCESSWRANGLER_OT_copyExecutionContextToClipboard(Operator):
         
         scn = context.scene
         process = scn.processwrangler_data.scene_processes[0]
-        exec_ctx = scn.get(Helpers.scene_ctx_name, None)
+        exec_ctx = process.get(Helpers.scene_ctx_name, None)
         exec_ctx_str = exec_ctx_to_str(exec_ctx, process)
         bytes = exec_ctx_str.encode('utf-8')
         if sys.platform == 'win32' or sys.platform == 'cygwin':
@@ -113,5 +112,3 @@ class PROCESSWRANGLER_OT_copyExecutionContextToClipboard(Operator):
             raise Exception('Platform not supported')
             
         return {"FINISHED"}    
-
-

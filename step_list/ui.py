@@ -78,7 +78,7 @@ class PROCESSWRANGLER_PT_ProcessPanel(Panel):
         layout = self.layout
         scn = bpy.context.scene
         process = scn.processwrangler_data.scene_processes[0]
-        exec_ctx = scn.get(Helpers.scene_ctx_name, None)
+        exec_ctx = process.get(Helpers.scene_ctx_name, None)
         
         row = layout.row()
         

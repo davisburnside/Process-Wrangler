@@ -145,9 +145,11 @@ def config_logger_for_PW(logger, level, style, tabs):
 
 def update_logger(self, context):
     
-    level = context.scene.processwrangler_console_log_level
-    style = context.scene.processwrangler_console_log_style
-    tabs = context.scene.processwrangler_console_log_tab
+    scene = context.scene
+    process = scene.processwrangler_data.scene_processes[0]
+    level = process.console_log_level
+    style = process.console_log_style
+    tabs = process.console_log_tab
     logger = Helpers.get_logger()
     Helpers.config_logger_for_PW(logger, level, style, tabs)
 
@@ -225,7 +227,7 @@ def generate_step_id():
     step_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(PW_len_stepid))
     return step_id
 
-def generate_execution_context():
+def generate_execution_context(prev_exec_ctx):
 
     # These arrays will always have the same length:
     # (step_script_names, step_collection_names, step_ids, step_did_execute)
@@ -238,7 +240,7 @@ def generate_execution_context():
 
     logger = get_logger()
     logger.info("generating new execution context")
-    exec_cxt = {
+    exec_ctx = {
         "current_execution_data" : {
             "current_step": "-1",
             "execution_result": "NOT STARTED",
@@ -257,7 +259,12 @@ def generate_execution_context():
         }
     }
 
-    return exec_cxt
+    # if prev_exec_ctx:
+        # for field_name in prev_exec_ctx["current_execution_data"].keys():
+        #     previous_value = prev_exec_ctx["current_execution_data"][field_name]
+        #     exec_ctx["previous_execution_data"][field_name] = previous_value
+    
+    return exec_ctx
 
 def get_pw_template_script_body():
     
@@ -409,23 +416,24 @@ def get_PW_tagged_for_step(datablock_type, tag_name=PW_tag_generated, step_id = 
 #==========================================================
 # Setters
 
-def save_exec_cxt(new_exec_cxt, scene):
+def save_exec_ctx(new_exec_ctx, process):
     
     # write previous execution context data to the new one
-    previous_exec_ctx = scene.get(scene_ctx_name)
+    previous_exec_ctx = process.get(scene_ctx_name)
     if previous_exec_ctx:
         for field_name in previous_exec_ctx["current_execution_data"].keys():
+            print(field_name)
             previous_value = previous_exec_ctx["current_execution_data"][field_name]
-            new_exec_cxt["previous_execution_data"][field_name] = previous_value
+            new_exec_ctx["previous_execution_data"][field_name] = previous_value
         
     # make a summary of run events
-    run_time = int(new_exec_cxt["current_execution_data"]["end_time"]) - int(new_exec_cxt["current_execution_data"]["start_time"])
-    did_fail = new_exec_cxt["current_execution_data"]["execution_result"] != "FINISHED SUCCESSFULLY"
+    run_time = int(new_exec_ctx["current_execution_data"]["end_time"]) - int(new_exec_ctx["current_execution_data"]["start_time"])
+    did_fail = new_exec_ctx["current_execution_data"]["execution_result"] != "FINISHED SUCCESSFULLY"
     execution_run_summary = f"Process {0} execution completed succesfully in {run_time} ms" if not did_fail else "Process {0} execution failed"
-    new_exec_cxt["execution_summary"]["run_summary"] = execution_run_summary
+    new_exec_ctx["execution_summary"]["run_summary"] = execution_run_summary
 
     # save some execution data to the scene
-    scene[scene_ctx_name] = new_exec_cxt
+    process[scene_ctx_name] = new_exec_ctx
 
     get_logger().debug("saved execution context to scene")
 

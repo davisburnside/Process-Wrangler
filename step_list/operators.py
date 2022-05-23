@@ -155,11 +155,11 @@ class PROCESSWRANGLER_OT_executeScriptList(Operator):
 
             # update Collection labels in UIList
             all_steps = process.steps_list
-            exec_cxt = scn.get(Helpers.scene_ctx_name)
+            exec_ctx = scn.get(Helpers.scene_ctx_name)
             for index, step in enumerate(all_steps):
-                if exec_cxt:
-                    col_names = exec_cxt["current_execution_data"]["step_collection_names"]
-                    steps_did_execute = exec_cxt["current_execution_data"]["step_did_execute"]
+                if exec_ctx:
+                    col_names = exec_ctx["current_execution_data"]["step_collection_names"]
+                    steps_did_execute = exec_ctx["current_execution_data"]["step_did_execute"]
                     
                     #remove first entry- it is not part of the List
                     steps_did_execute = steps_did_execute[1:]
@@ -194,7 +194,8 @@ class PROCESSWRANGLER_OT_selectCollectionOrMembers(Operator):
     def execute(self, context):
         
         scn = context.scene
-        exec_ctx = scn.get(Helpers.scene_ctx_name)
+        process = scn.processwrangler_data.scene_processes[0]
+        exec_ctx = process.get(Helpers.scene_ctx_name)
         if exec_ctx:
             Helpers.select_collection_objects_for_stepnum(self.step_id, exec_ctx, context)
             self.step_id = ""
@@ -257,7 +258,7 @@ class PROCESSWRANGLER_OT_clearAll(Operator):
             step.step_index_when_previously_executed = -1
 
         # clear PW objects, collections, orphaned data, and scene properties
-        Scene_Wiping.PW_scene_clear_all(context.scene)
+        Scene_Wiping.PW_scene_clear_all(scn, process)
           
         return {"FINISHED"}    
 
@@ -336,7 +337,7 @@ class PROCESSWRANGLER_OT_listActions(Operator):
         selected_action = self.action
         selected_script_name = scn.processwrangler_data.scripts_in_blend_file
         idx = process.steps_list_selected_index
-        exec_ctx = scn.get(Helpers.scene_ctx_name, None)
+        exec_ctx = process.get(Helpers.scene_ctx_name, None)
         
         try:
             item = None

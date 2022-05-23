@@ -129,27 +129,6 @@ def register():
     
     print(f"Installing {addonName} version {addonVersion}")
 
-    # for development only
-    # Format of packages and subpackages:
-    # File: Wrangler, Process Wrangler.Scene_Wiping...
-    # Dir: Process Wrangler.debugging.operators...
-    # mods_to_del = []
-    # for mod_name in sys.modules:
-    #     if "Process Wrangler" in mod_name:
-    #         try:
-    #             mods_to_del.append(mod_name)
-    #             print (f"Found module {sys.modules[mod_name]}")
-    #         except Exception as e:
-    #             print(f"Failed to delete module named {mod_name}")
-    #             print(e)
-    # print(f'Modules to delete: {", ".join(mods_to_del)}')     
-    # for mod in mods_to_del:
-    #     if sys.modules.get(mod_name, False):
-    #         print (f"Deleting module {sys.modules[mod_name]}")
-    #         del sys.modules[mod_name]
-    #     else:
-    #         print (f"Module {mod_name} no longer exists")
-
     # Automatically finds, imports, & registers Blender classes in a nested directory stack :D
     auto_load.init()
     auto_load.register()
@@ -160,62 +139,12 @@ def register():
 
     bpy.types.Scene.processwrangler_data = bpy.props.PointerProperty(
         type=PROCESSWRANGLER_process_data,
-        # name = "PW Data"
+        name = "PW Data"
         )
-
-    # bpy.types.Scene.processwrangler_active_process_index = bpy.props.IntProperty(default=0)
-    # bpy.types.Scen = CollectionProperty(type=PROCESSWRANGLER_process_parameters)
-
-    # bpy.types.Scene.processwrangler_step_list = CollectionProperty(type=PROCESSWRANGLER_step)
-    # bpy.types.Scene.processwrangler_step_list_selectedindex = IntProperty()
-    # bpy.types.Scene.processwrangler_cached_msg = StringProperty()
-
-    # used in "Execution Variables" popup Panel
-    #==============================
-    # bpy.types.Scene.processwrangler_execution_variables = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-    
-
-    # configured in Debugging Panel
-    #==============================
-    # bpy.types.Scene.processwrangler_console_log_level = bpy.props.EnumProperty(
-    #     items=(
-    #         ('DEBUG', "Debug", ""),
-    #         ("INFO", "Info", ""),
-    #         ('WARNING', "Warning", ""),
-    #         ('ERROR', "Error", "")
-    #     ),
-    #     default="DEBUG",
-    #     update=Helpers.update_logger
-    # )
-    # bpy.types.Scene.processwrangler_console_log_style = bpy.props.EnumProperty(
-    #     items=(
-    #         ("COLORFUL", "Colorful", ""),
-    #         ('MONOCHROME', "Monochrome", "")
-    #     ),
-    #     default="COLORFUL",
-    #     update=Helpers.update_logger
-    # )
-    # bpy.types.Scene.processwrangler_console_log_tab = bpy.props.IntProperty(
-    #     default=2,
-    #     max = 8,
-    #     min = 0,
-    #     update=Helpers.update_logger
-    # )
-    # bpy.types.Scene.processwrangler_console_include_step_attachments = bpy.props.BoolProperty(
-    #     default=True,
-    #     update=Helpers.update_logger
-    # )
-    # bpy.types.Scene.processwrangler_console_include_prev_step = bpy.props.BoolProperty(
-    #     default=True,
-    #     update=Helpers.update_logger,
-    #     description="Include data from previous run?"
-    # )
-    #==============================
-    
 
 
     print("Registered Process Wrangler")
-    print("V17")
+    print("V18")
 
     if len(bpy.context.scene.processwrangler_data.scene_processes) == 0:
         bpy.ops.processwrangler.add_scene_process()
@@ -224,36 +153,33 @@ def unregister():
 
     auto_load.unregister()
         
-    if hasattr(bpy.types.Scene, "processwrangler_step_list_selectedindex"):
-        del bpy.types.Scene.processwrangler_step_list_selectedindex
-    if hasattr(bpy.types.Scene, "processwrangler_step_list"):
-        del bpy.types.Scene.processwrangler_step_list
-    if hasattr(bpy.types.Scene, "processwrangler_cached_msg"):
-        del bpy.types.Scene.processwrangler_cached_msg 
-    if hasattr(bpy.types.Scene, "processwrangler_console_log_level"):
-        del bpy.types.Scene.processwrangler_console_log_level    
-    if hasattr(bpy.types.Scene, "processwrangler_console_log_style"):
-        del bpy.types.Scene.processwrangler_console_log_style  
-    if hasattr(bpy.types.Scene, "processwrangler_console_log_tab"):
-        del bpy.types.Scene.processwrangler_console_log_tab
-    if hasattr(bpy.types.Scene, "processwrangler_console_include_step_attachments"):
-        del bpy.types.Scene.processwrangler_console_include_step_attachments
-    if hasattr(bpy.types.Scene, "processwrangler_console_include_prev_step"):
-        del bpy.types.Scene.processwrangler_console_include_prev_step
-    if hasattr(bpy.types.Scene, "processwrangler_execution_variables"):
-        del bpy.types.Scene.processwrangler_execution_variables
-    if hasattr(bpy.types.Scene, "processwrangler_scene_processes"):
-        del bpy.types.Scene.processwrangler_scene_processes
-    if hasattr(bpy.types.Scene, "processwrangler_scene_processes"):
-        del bpy.types.Scene.processwrangler_active_process_index
+    # if hasattr(bpy.types.Scene, "processwrangler_step_list_selectedindex"):
+    #     del bpy.types.Scene.processwrangler_step_list_selectedindex
+    # if hasattr(bpy.types.Scene, "processwrangler_step_list"):
+    #     del bpy.types.Scene.processwrangler_step_list
+    # if hasattr(bpy.types.Scene, "processwrangler_cached_msg"):
+    #     del bpy.types.Scene.processwrangler_cached_msg 
+    # if hasattr(bpy.types.Scene, "processwrangler_console_log_level"):
+    #     del bpy.types.Scene.processwrangler_console_log_level    
+    # if hasattr(bpy.types.Scene, "processwrangler_console_log_style"):
+    #     del bpy.types.Scene.processwrangler_console_log_style  
+    # if hasattr(bpy.types.Scene, "processwrangler_console_log_tab"):
+    #     del bpy.types.Scene.processwrangler_console_log_tab
+    # if hasattr(bpy.types.Scene, "processwrangler_console_include_step_attachments"):
+    #     del bpy.types.Scene.processwrangler_console_include_step_attachments
+    # if hasattr(bpy.types.Scene, "processwrangler_console_include_prev_step"):
+    #     del bpy.types.Scene.processwrangler_console_include_prev_step
+    # if hasattr(bpy.types.Scene, "processwrangler_execution_variables"):
+    #     del bpy.types.Scene.processwrangler_execution_variables
+    # if hasattr(bpy.types.Scene, "processwrangler_scene_processes"):
+    #     del bpy.types.Scene.processwrangler_scene_processes
+    # if hasattr(bpy.types.Scene, "processwrangler_scene_processes"):
+    #     del bpy.types.Scene.processwrangler_active_process_index
     
     
-        
     bpy.utils.unregister_class(PROCESSWRANGLER_process_data)     
     bpy.utils.unregister_class(PROCESSWRANGLER_process_parameters)
     bpy.utils.unregister_class(PROCESSWRANGLER_step)
-    
-    #TODO implement
     PW_Change_Handlers.unregister()
 
     print("Unregistered Process Wrangler")

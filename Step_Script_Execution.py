@@ -62,7 +62,7 @@ def PW_execute(
 
     space_imageeditors = []
     scene = context.scene
-    prev_exec_ctx = scene.get(Helpers.scene_ctx_name)
+    prev_exec_ctx = process.get(Helpers.scene_ctx_name)
     prev_exec_ctx = prev_exec_ctx.to_dict() if prev_exec_ctx else None
     exec_ctx = None
     should_save_exec_ctx_to_scene = True
@@ -94,12 +94,13 @@ def PW_execute(
             for x in enumerate(raw_scripts_list)]
 
         # Remove old execution context if it is invalid
-        if not Helpers.is_exec_ctx_valid(scene.get(Helpers.scene_ctx_name)):
+        if not Helpers.is_exec_ctx_valid(process.get(Helpers.scene_ctx_name)):
             logger.warning("Invalid execution context in Scene. Making a new one")
-            Helpers.PW_scene_clear_all(scene)
+            Helpers.PW_scene_clear_all(scene, process)
 
         # Generate fresh PW execution context
-        exec_ctx = Helpers.generate_execution_context()
+        old_exec_ctx = process.get(Helpers.scene_ctx_name)
+        exec_ctx = Helpers.generate_execution_context(old_exec_ctx)
         exec_ctx["current_execution_data"]["current_step"] = 0 
         exec_ctx["current_execution_data"]["execution_result"] = "STARTED" 
 
@@ -204,13 +205,12 @@ def PW_execute(
         # the root process step will not be examined in the loop below, so do it here
         child_col_name = complete_step_data_array[0]["col_name"]
         child_step_id = complete_step_data_array[0]["step_id"]
-        # all_step_ids = [x["step_id"] for x in complete_step_data_array]
         if Helpers.step_col_validate_children(pw_master_col, child_col_name, child_step_id):
             
             # set execution flag for first step
             scripts_list_indexed[0]["is_enabled"] = True
 
-            _ = [Scene_Wiping.delete_PW_step_collection(x.name, scene, False) for x in pw_master_col.children]
+            # _ = [Scene_Wiping.delete_PW_step_collection(x.name, scene, False) for x in pw_master_col.children]
         
         # Execute scripts / generate collections in sequential order
         last_stepnum = len(complete_step_data_array)
@@ -232,18 +232,6 @@ def PW_execute(
             if not step_col:
                 step_col = Helpers.create_PW_step_collection(step_id, col_name, Helpers.pw_master_collection_name)
 
-            # Validate children
-            # if stepnum != last_stepnum:
-            #     child_col_name = complete_step_data_array[stepnum]["col_name"]
-            #     child_step_id = complete_step_data_array[stepnum]["step_id"]
-            #     if Helpers.step_col_validate_children(step_col, child_col_name, child_step_id):
-
-            #         # set execution flag for first step
-            #         should_execute = True
-                    
-            #         # #delete Collection & Collection members of first-level children
-            #         _ = [Scene_Wiping.delete_PW_step_collection(x.name, scene, False) for x in step_col.children]
-
             # append step data to execution context (Not saved to Scene until process completes)
             exec_ctx["current_execution_data"]["step_script_names"].append(script_name)
             exec_ctx["current_execution_data"]["step_collection_names"].append(col_name)
@@ -253,117 +241,80 @@ def PW_execute(
             exec_ctx["current_execution_data"]["current_step"] = stepnum
             
             if should_execute:
-
-                # Check if the PW execution function is present in the file. The script can't be evaluated without it
-                if script_module and Helpers.processWrangler_execute_func_name in list(dir(script_module)):
                     
-                    logger.info(f"executing step {stepnum}")
+                logger.info(f"executing step {stepnum}")
 
-                    # clear old stuff, make new stuff
-                    Scene_Wiping.delete_PW_step_collection(col_name, scene, include_children = True, include_col=False)
-                    # original_col_children_names = [x.name for x in step_col.children]
-                    # _ = [Scene_Wiping.delete_PW_step_collection(x.name, scene, False) for x in parent_col.children]
+                # clear old stuff, make new stuff
+                _ = Scene_Wiping.delete_PW_step_collection(col_name, scene, include_children = True, include_col=False)
+ 
+                # get 'before' snapshot for tagging new objects 
+                scene_snapshot_before_step = Helpers.snapshot_scene_objects(scene)
 
-                    # new Collections takes over parentage of children from previous executions
-                    # If the child steps are flagged for execution though, the children will be replaced in later steps
-                    # for child_col_name in original_col_children_names:
-                    #     child_col = bpy.data.collections.get(child_col_name)
-                    #     if child_col and child_col_name not in [x.name for x in step_col.children]:
-                    #         step_col.children.link(child_col)
+                # execute main function of module
+                # 'ProcessWrangler_execute' function of script
+                try:
+                    # Wrapping the exec_ctx allows utility functions to be added to it
+                    exec_ctx_wrapper = Execution_Context_Wrapper.ExecutionContextWrapper(exec_ctx)
 
-                    # get 'before' snapshot for tagging new objects 
-                    scene_snapshot_before_step = Helpers.snapshot_scene_objects(scene)
+                    # Images generated by PW will need to be manually set back into image editor screens if they are active there 
+                    note_screen_image_contents(context, space_imageeditors)              
 
-                    # execute main function of module
-                    # 'ProcessWrangler_execute' function of script
-                    try:
-                        # Wrapping the exec_ctx allows utility functions to be added to it
-                        exec_ctx_wrapper = Execution_Context_Wrapper.ExecutionContextWrapper(exec_ctx)
+                    ###########################################################################################
+                    # Execute Process
+                    processWrangler_execute = getattr(script_module, Helpers.processWrangler_execute_func_name)
+                    processWrangler_execute(exec_ctx_wrapper)
+                    ###########################################################################################
 
-                        # Images generated by PW will need to be manually set back into image editor screens if they are active there 
-                        note_screen_image_contents(context, space_imageeditors)              
+                # Errors occuring inside script are logged to console, saved to exec_ctx, and displayed in UI
+                except BaseException as e:
 
-                        ###########################################################################################
-                        # Execute Process
-                        processWrangler_execute = getattr(script_module, Helpers.processWrangler_execute_func_name)
-                        processWrangler_execute(exec_ctx_wrapper)
-                        ###########################################################################################
+                    where_error = f"Error while executing script '{script_name}' at step {stepnum}"
+                    logger.error(where_error)
 
-                    # Errors occuring inside script are logged to console, saved to exec_ctx, and displayed in UI
-                    except BaseException as e:
+                    # print concise error details, format & remove unnecessary information
+                    # Softens the blow, I guess
+                    error_stack = traceback.format_exc().split('\n')
+                    start_line = 3
+                    max_line_count = 50
+                    error_stack = error_stack[start_line:max_line_count + start_line]
+                    if len(error_stack) > 0:
+                        error_stack[0] = error_stack[0].replace("File \"<string>\",", "", 1)
+                        error_stack[0] = error_stack[0].strip()
+                    error_stack.insert(0, str(type(e)))
+                    error_stack[0], error_stack[1]  = error_stack[1], error_stack[0] 
+                    final_error_str = "\n".join(error_stack)
 
-                        where_error = f"Error while executing script '{script_name}' at step {stepnum}"
-                        logger.error(where_error)
+                    # contains stack trace up to max_line_count lines long
+                    logger.error(final_error_str)
 
-                        # print concise error details, format & remove unnecessary information
-                        # Softens the blow, I guess
-                        error_stack = traceback.format_exc().split('\n')
-                        start_line = 3
-                        max_line_count = 50
-                        error_stack = error_stack[start_line:max_line_count + start_line]
-                        if len(error_stack) > 0:
-                            error_stack[0] = error_stack[0].replace("File \"<string>\",", "", 1)
-                            error_stack[0] = error_stack[0].strip()
-                        error_stack.insert(0, str(type(e)))
-                        error_stack[0], error_stack[1]  = error_stack[1], error_stack[0] 
-                        final_error_str = "\n".join(error_stack)
-
-                        # contains stack trace up to max_line_count lines long
-                        logger.error(final_error_str)
-
-                        where_error = f"In script '{script_name}' at step {stepnum} "
-                        final_error_str = f"{where_error}\n{final_error_str}"
-
-                        # Exit execution loop if python error occurs
-                        exec_ctx["execution_summary"]["error_message"] = final_error_str
-                        exec_ctx["current_execution_data"]["execution_result"] = "EXECUTION FAILED" 
-                        break
-
-                    finally:
-                        
-                        # tag new objects
-                        scene_snapshot_after_step = Helpers.snapshot_scene_objects(scene)
-                        Helpers.tag_PW_generated_objects(step_col, scene_snapshot_before_step, scene_snapshot_after_step, scene)
-                        scene_snapshot_before_step = scene_snapshot_after_step
-                        logger.info(f"finished step {stepnum}")
-
-                        # Images generated by PW will need to be manually set back into image editor screens if they are active there 
-                        restore_screen_image_contents(step_id, space_imageeditors)
-
-                # Check if the Script failed evaluation (likely because of compilation error)
-                elif script_module is None:
-
-                    error_str = f"Could not evaluate Script '{script_name}' at step {stepnum}\n{module_error}"
+                    where_error = f"In script '{script_name}' at step {stepnum} "
+                    final_error_str = f"{where_error}\n{final_error_str}"
 
                     # Exit execution loop if python error occurs
-                    exec_ctx["execution_summary"]["error_message"] = error_str
+                    exec_ctx["execution_summary"]["error_message"] = final_error_str
                     exec_ctx["current_execution_data"]["execution_result"] = "EXECUTION FAILED" 
-                    logger.error(error_str) 
                     break
 
-                # Script is flagged as belonging to a Process Step, but missing the required execution function         
-                else:
-                    # function_signature = f"{Helpers.processWrangler_execute_func_name}(exec_ctx)"
-                    # error_str = f"Script '{text_datablock.name}' is missing a required function '{function_signature}'"
+                finally:
+                    
+                    # tag new objects
+                    scene_snapshot_after_step = Helpers.snapshot_scene_objects(scene)
+                    Helpers.tag_PW_generated_objects(step_col, scene_snapshot_before_step, scene_snapshot_after_step, scene)
+                    scene_snapshot_before_step = scene_snapshot_after_step
+                    logger.info(f"finished step {stepnum}")
 
-                    # # Exit execution loop if python error occurs
-                    # exec_ctx["execution_summary"]["error_message"] = error_str
-                    # exec_ctx["current_execution_data"]["execution_result"] = "EXECUTION FAILED" 
-                    # logger.error(error_str)
-                    print("THIS SHOULDN'T BE HERE 1")
-                    break
+                    # Images generated by PW need to be set back into image editor screens if they are active there 
+                    restore_screen_image_contents(step_id, space_imageeditors)
 
             else:
                 logger.info(f"skipping execution for step {stepnum}")
 
                 # copy attached data from previous run
-                # all_prev_step_attachment_arrays = prev_exec_ctx["previous_execution_data"].get("step_attached_data")
-                # print(all_prev_step_attachment_arrays)
-                # print(Helpers.pretty_json(exec_ctx["previous_execution_data"]))
-                # if all_prev_step_attachment_arrays and len(all_prev_step_attachment_arrays) >= stepnum:
-                #     prev_step_attachments_array = all_prev_step_attachment_arrays[stepnum]
-                #     exec_ctx["current_execution_data"]["step_attached_data"][stepnum] = prev_step_attachments_array
-                #     logger.debug(f"Copied attached data for step {stepnum} from previous exection ({len(prev_step_attachments_array)} items)")
+                all_prev_step_attachment_arrays = prev_exec_ctx["current_execution_data"].get("step_attached_data")
+                if all_prev_step_attachment_arrays and len(all_prev_step_attachment_arrays) >= stepnum:
+                    prev_step_attachments_array = all_prev_step_attachment_arrays[stepnum]
+                    exec_ctx["current_execution_data"]["step_attached_data"][stepnum] = prev_step_attachments_array
+                    logger.debug(f"Copied attached data for step {stepnum} from previous exection ({len(prev_step_attachments_array)} items)")
 
             # Log step result, populate quick cache 
             prev_step_data["col_name"] = col_name
@@ -387,5 +338,5 @@ def PW_execute(
         logger.error(e)
     finally:
         if should_save_exec_ctx_to_scene:
-            Helpers.save_exec_cxt(exec_ctx, scene)
+            Helpers.save_exec_ctx(exec_ctx, process)
             return True, None
